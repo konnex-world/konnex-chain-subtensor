@@ -44,6 +44,66 @@ cargo check --workspace
 cargo test --workspace --no-run
 ```
 
+## KNX Windows-Specific Requirements and Fixes
+
+On Windows, `cargo check --workspace` may fail if extra native tools are missing.
+
+### 1) Install Protocol Buffers compiler (`protoc`)
+
+```powershell
+winget install --id Google.Protobuf -e
+```
+
+If `protoc` is not found after install, restart the terminal.  
+Quick check:
+
+```powershell
+protoc --version
+```
+
+If restart did not help, add `protoc` to visible PATH manually.
+
+Current session:
+
+```powershell
+$protoc = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter protoc.exe -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+$env:PATH = "$($protoc | Split-Path);$env:PATH"
+$env:PROTOC = $protoc
+protoc --version
+```
+
+Persist for next shells:
+
+```powershell
+setx PROTOC "$env:PROTOC"
+setx PATH "$(($env:PROTOC | Split-Path));$env:PATH"
+```
+
+### 2) Install LLVM/Clang (`libclang` for bindgen)
+
+```powershell
+winget install --id LLVM.LLVM -e
+```
+
+If build scripts still cannot find `libclang.dll`, set:
+
+```powershell
+$env:LIBCLANG_PATH = "C:\Program Files\LLVM\bin"
+$env:PATH = "$env:LIBCLANG_PATH;$env:PATH"
+```
+
+Then retry:
+
+```powershell
+cargo check --workspace
+```
+
+### 3) Typical errors and meaning
+
+- `Could not find protoc` -> install protobuf compiler and reopen shell.
+- `Unable to find libclang` -> install LLVM and set `LIBCLANG_PATH`.
+- `Blocking waiting for file lock on package cache` -> another `cargo` process is already running; wait or stop it.
+
 ## Repository Scope
 
 Key areas in this repository:
