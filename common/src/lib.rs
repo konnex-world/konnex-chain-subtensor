@@ -119,6 +119,105 @@ impl TypeInfo for NetUid {
     }
 }
 
+#[repr(transparent)]
+#[derive(
+    Deserialize,
+    Serialize,
+    Clone,
+    Copy,
+    Decode,
+    Default,
+    Encode,
+    Eq,
+    Hash,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    RuntimeDebug,
+)]
+#[serde(transparent)]
+pub struct TaskId(u64);
+
+impl TaskId {
+    pub fn inner(&self) -> u64 {
+        self.0
+    }
+}
+
+impl CompactAs for TaskId {
+    type As = u64;
+
+    fn encode_as(&self) -> &Self::As {
+        &self.0
+    }
+
+    fn decode_from(v: Self::As) -> Result<Self, CodecError> {
+        Ok(Self(v))
+    }
+}
+
+impl From<Compact<TaskId>> for TaskId {
+    fn from(c: Compact<TaskId>) -> Self {
+        c.0
+    }
+}
+
+impl From<TaskId> for u64 {
+    fn from(val: TaskId) -> Self {
+        val.0
+    }
+}
+
+impl From<u64> for TaskId {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+impl TypeInfo for TaskId {
+    type Identity = <u64 as TypeInfo>::Identity;
+    fn type_info() -> scale_info::Type {
+        <u64 as TypeInfo>::type_info()
+    }
+}
+
+#[derive(
+    Deserialize,
+    Serialize,
+    Clone,
+    Copy,
+    Decode,
+    Default,
+    Encode,
+    Eq,
+    Hash,
+    MaxEncodedLen,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    RuntimeDebug,
+    TypeInfo,
+)]
+pub struct TaskKey {
+    subnet_id: NetUid,
+    task_id: TaskId,
+}
+
+impl TaskKey {
+    pub fn new(subnet_id: NetUid, task_id: TaskId) -> Self {
+        Self { subnet_id, task_id }
+    }
+
+    pub fn subnet_id(&self) -> NetUid {
+        self.subnet_id
+    }
+
+    pub fn task_id(&self) -> TaskId {
+        self.task_id
+    }
+}
+
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen, TypeInfo,
 )]
@@ -212,5 +311,18 @@ mod tests {
     #[test]
     fn netuid_has_u16_bin_repr() {
         assert_eq!(NetUid(5).encode(), 5u16.encode());
+    }
+
+    #[test]
+    fn task_id_has_u64_bin_repr() {
+        assert_eq!(TaskId(42).encode(), 42u64.encode());
+    }
+
+    #[test]
+    fn task_key_round_trip_encode_decode() {
+        let key = TaskKey::new(NetUid::from(7), TaskId::from(99));
+        let encoded = key.encode();
+        let decoded = TaskKey::decode(&mut &encoded[..]).expect("decode task key");
+        assert_eq!(decoded, key);
     }
 }
