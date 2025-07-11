@@ -221,6 +221,23 @@ impl TaskKey {
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen, TypeInfo,
 )]
+pub enum PopwDecision {
+    Pending,
+    Approved,
+    Rejected,
+    Finalized,
+    Unknown,
+}
+
+impl PopwDecision {
+    pub fn is_releasable(&self) -> bool {
+        matches!(self, Self::Approved | Self::Finalized)
+    }
+}
+
+#[derive(
+    Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Debug, MaxEncodedLen, TypeInfo,
+)]
 pub enum ProxyType {
     Any,
     Owner, // Subnet owner Calls
@@ -324,5 +341,14 @@ mod tests {
         let encoded = key.encode();
         let decoded = TaskKey::decode(&mut &encoded[..]).expect("decode task key");
         assert_eq!(decoded, key);
+    }
+
+    #[test]
+    fn popw_decision_release_gate_behaves_as_expected() {
+        assert!(!PopwDecision::Pending.is_releasable());
+        assert!(PopwDecision::Approved.is_releasable());
+        assert!(!PopwDecision::Rejected.is_releasable());
+        assert!(PopwDecision::Finalized.is_releasable());
+        assert!(!PopwDecision::Unknown.is_releasable());
     }
 }
