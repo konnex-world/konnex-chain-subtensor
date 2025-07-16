@@ -129,6 +129,9 @@ ark-serialize = { workspace = true }
 # Crowdloan
 pallet-crowdloan = { workspace = true }
 
+# Konnex prototype escrow (subnet_id + task_id namespace)
+pallet-konnex-escrow = { workspace = true }
+
 [dev-dependencies]
 frame-metadata = { workspace = true }
 sp-io = { workspace = true }
@@ -203,6 +206,7 @@ std = [
 	"subtensor-precompiles/std",
 	"subtensor-runtime-common/std",
 	"pallet-crowdloan/std",
+	"pallet-konnex-escrow/std",
 	# Frontier
 	"fp-evm/std",
 	"fp-rpc/std",

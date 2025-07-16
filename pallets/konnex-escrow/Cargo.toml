@@ -1,0 +1,33 @@
+[package]
+name = "pallet-konnex-escrow"
+version = "0.1.0"
+description = "Prototype subnet-scoped escrow (Konnex demo; unstable API)."
+authors = ["Konnex"]
+edition = "2024"
+license = "Unlicense"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
+	"derive",
+	"max-encoded-len",
+] }
+scale-info = { workspace = true, features = ["derive"] }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"frame-support/std",
+	"frame-system/std",
+	"scale-info/std",
+	"sp-runtime/std",
+	"sp-std/std",
+]

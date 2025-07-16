@@ -6879,6 +6879,7 @@ dependencies = [
  "pallet-grandpa",
  "pallet-hotfix-sufficients",
  "pallet-insecure-randomness-collective-flip",
+ "pallet-konnex-escrow",
  "pallet-membership",
  "pallet-multisig",
  "pallet-preimage",
@@ -7595,6 +7596,18 @@ dependencies = [
  "safe-mix",
  "scale-info",
  "sp-runtime",
+]
+
+[[package]]
+name = "pallet-konnex-escrow"
+version = "0.1.0"
+dependencies = [
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-runtime",
+ "sp-std 14.0.0",
 ]
 
 [[package]]

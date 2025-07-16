@@ -52,6 +52,7 @@ pallet-collective = { default-features = false, path = "pallets/collective" }
 pallet-commitments = { default-features = false, path = "pallets/commitments" }
 pallet-registry = { default-features = false, path = "pallets/registry" }
 pallet-crowdloan = { default-features = false, path = "pallets/crowdloan" }
+pallet-konnex-escrow = { default-features = false, path = "pallets/konnex-escrow" }
 pallet-subtensor = { default-features = false, path = "pallets/subtensor" }
 pallet-subtensor-swap = { default-features = false, path = "pallets/swap" }
 pallet-subtensor-swap-runtime-api = { default-features = false, path = "pallets/swap/runtime-api" }
