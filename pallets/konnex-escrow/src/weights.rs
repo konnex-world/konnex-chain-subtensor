@@ -2,6 +2,7 @@
 
 #![allow(missing_docs)]
 
+use frame_support::traits::Get;
 use frame_support::weights::{Weight, constants::RocksDbWeight};
 use core::marker::PhantomData;
 

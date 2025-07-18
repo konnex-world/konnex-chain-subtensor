@@ -4,10 +4,16 @@
   "context": "..",
   "settings": {
     "terminal.integrated.shell.linux": "/bin/bash",
-    "lldb.executable": "/usr/bin/lldb"
+    "lldb.executable": "/usr/bin/lldb",
+    "rust-analyzer.check.run": "never",
+    "rust-analyzer.checkOnSave": false,
+    "rust-analyzer.cargo.targetDir": "target/rust-analyzer",
+    "rust-analyzer.cargo.extraEnv": {
+      "SKIP_WASM_BUILD": "1"
+    }
   },
   "extensions": [
-    "rust-lang.rust",
+    "rust-lang.rust-analyzer",
     "bungcip.better-toml",
     "vadimcn.vscode-lldb"
   ],
