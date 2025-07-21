@@ -1,0 +1,19 @@
+# Normalize text files to LF in the Git index so Windows clones + Linux devcontainers
+# do not flip every line ending. See: https://git-scm.com/docs/gitattributes
+* text=auto eol=lf
+
+# Binaries (do not touch line endings)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.wasm binary
+*.pdf binary
+*.parquet binary
+*.zip binary
+*.7z binary

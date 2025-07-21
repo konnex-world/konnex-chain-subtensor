@@ -1,12 +1,19 @@
 {
   "name": "Substrate Node template",
+  "image": "mcr.microsoft.com/devcontainers/rust:1",
   "context": "..",
   "settings": {
     "terminal.integrated.shell.linux": "/bin/bash",
-    "lldb.executable": "/usr/bin/lldb"
+    "lldb.executable": "/usr/bin/lldb",
+    "rust-analyzer.check.run": "never",
+    "rust-analyzer.checkOnSave": false,
+    "rust-analyzer.cargo.targetDir": "target/rust-analyzer",
+    "rust-analyzer.cargo.extraEnv": {
+      "SKIP_WASM_BUILD": "1"
+    }
   },
   "extensions": [
-    "rust-lang.rust",
+    "rust-lang.rust-analyzer",
     "bungcip.better-toml",
     "vadimcn.vscode-lldb"
   ],
@@ -14,12 +21,13 @@
     3000,
     9944
   ],
-  "onCreateCommand": ["cargo build", "cargo check"],
-  "postStartCommand": "./target/debug/node-template --dev --ws-external",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y protobuf-compiler clang libclang-dev pkg-config libssl-dev && rustup toolchain install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly",
   "menuActions": [
-    {"id": "polkadotjs",
-     "label": "Open PolkadotJS Apps",
-     "type": "external-preview",
-     "args": ["https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/$HOST/wss"]}
+    {
+      "id": "polkadotjs",
+      "label": "Open PolkadotJS Apps",
+      "type": "external-preview",
+      "args": ["https://polkadot.js.org/apps/?rpc=wss%3A%2F%2F/$HOST/wss"]
+    }
   ]
 }

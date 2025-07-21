@@ -217,7 +217,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     //   `spec_version`, and `authoring_version` are the same between Wasm and native.
     // This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
     //   the compatible custom types.
-    spec_version: 283,
+    spec_version: 284,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -1538,6 +1538,18 @@ impl pallet_crowdloan::Config for Runtime {
     type MaxContributors = MaxContributors;
 }
 
+parameter_types! {
+    pub const KonnexEscrowPalletId: PalletId = PalletId(*b"knexscrw");
+}
+
+impl pallet_konnex_escrow::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type Currency = Balances;
+    type PalletId = KonnexEscrowPalletId;
+    type WeightInfo = pallet_konnex_escrow::weights::SubstrateWeight<Runtime>;
+    type MaxTaskIdLen = ConstU32<128>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
     pub struct Runtime
@@ -1574,6 +1586,7 @@ construct_runtime!(
         Drand: pallet_drand = 26,
         Crowdloan: pallet_crowdloan = 27,
         Swap: pallet_subtensor_swap = 28,
+        KonnexEscrow: pallet_konnex_escrow = 29,
     }
 );
 
