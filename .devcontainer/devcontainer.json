@@ -21,7 +21,7 @@
     3000,
     9944
   ],
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y protobuf-compiler clang libclang-dev pkg-config libssl-dev && rustup toolchain install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly",
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y protobuf-compiler clang libclang-dev pkg-config libssl-dev && rustup toolchain install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly && bash .devcontainer/setup-ssh-konnex.sh",
   "menuActions": [
     {
       "id": "polkadotjs",

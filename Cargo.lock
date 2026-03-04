@@ -11953,8 +11953,6 @@ dependencies = [
 [[package]]
 name = "sp-ark-bls12-381"
 version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "840194ac8a222b20713373717aba7931e0e2c25e30aa04a935cef72cda8bc0f6"
 dependencies = [
  "ark-bls12-381-ext",
  "ark-ec",
@@ -12130,8 +12128,6 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff9a119f88fcd9c01c9832511eae041cd5fdae35abbeff770b2954f636a7595a"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-381",

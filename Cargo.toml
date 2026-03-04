@@ -261,6 +261,12 @@ tle = { git = "https://github.com/ideal-lab5/timelock", rev = "5416406cfd32799e3
 
 cumulus-primitives-proof-size-hostfunction = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-stable2412-6", package = "cumulus-primitives-proof-size-hostfunction", default-features = false }
 
+# crates.io `sp-crypto-ec-utils` 0.4.0 (pulled in by `sp-ark-bls12-381`) is missing `use sp_std::vec::Vec`
+# under `no_std`; polkadot-sdk git uses a newer crate. Patch keeps drand/ark path on crates.io 0.4.x.
+[patch.crates-io]
+sp-ark-bls12-381 = { path = "patches/sp-ark-bls12-381" }
+sp-crypto-ec-utils = { path = "patches/sp-crypto-ec-utils" }
+
 [profile.release]
 panic = "unwind"
 
