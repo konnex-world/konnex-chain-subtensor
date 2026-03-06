@@ -229,7 +229,7 @@ pallet-hotfix-sufficients = { git = "https://github.com/opentensor/frontier", re
 
 #DRAND
 pallet-drand = { path = "pallets/drand", default-features = false }
-sp-crypto-ec-utils = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-stable2412-6", features = [
+sp-crypto-ec-utils = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-stable2412-6", default-features = false, features = [
 	"bls12-381",
 ] }
 getrandom = { version = "0.2.15", features = [
@@ -244,7 +244,6 @@ ark-crypto-primitives = { version = "0.4.0", default-features = false, features 
 ark-scale = { version = "0.0.11", default-features = false, features = [
 	"hazmat",
 ] }
-sp-ark-bls12-381 = { version = "0.4.1", default-features = false }
 ark-bls12-381 = { version = "0.4.0", features = [
 	"curve",
 ], default-features = false }
@@ -260,12 +259,6 @@ rand_chacha = { version = "0.3.1", default-features = false }
 tle = { git = "https://github.com/ideal-lab5/timelock", rev = "5416406cfd32799e31e1795393d4916894de4468", default-features = false }
 
 cumulus-primitives-proof-size-hostfunction = { git = "https://github.com/paritytech/polkadot-sdk.git", tag = "polkadot-stable2412-6", package = "cumulus-primitives-proof-size-hostfunction", default-features = false }
-
-# crates.io `sp-crypto-ec-utils` 0.4.0 (pulled in by `sp-ark-bls12-381`) is missing `use sp_std::vec::Vec`
-# under `no_std`; polkadot-sdk git uses a newer crate. Patch keeps drand/ark path on crates.io 0.4.x.
-[patch.crates-io]
-sp-ark-bls12-381 = { path = "patches/sp-ark-bls12-381" }
-sp-crypto-ec-utils = { path = "patches/sp-crypto-ec-utils" }
 
 [profile.release]
 panic = "unwind"
