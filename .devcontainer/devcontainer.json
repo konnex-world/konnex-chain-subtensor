@@ -2,6 +2,13 @@
   "name": "Substrate Node template",
   "image": "mcr.microsoft.com/devcontainers/rust:1",
   "context": "..",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest",
+      "moby": true
+    }
+  },
   "settings": {
     "terminal.integrated.shell.linux": "/bin/bash",
     "lldb.executable": "/usr/bin/lldb",
