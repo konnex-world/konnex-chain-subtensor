@@ -6,27 +6,36 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
       "version": "latest",
-      "moby": true
+      "moby": false
     }
   },
-  "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash",
-    "lldb.executable": "/usr/bin/lldb",
-    "rust-analyzer.check.run": "never",
-    "rust-analyzer.checkOnSave": false,
-    "rust-analyzer.cargo.targetDir": "target/rust-analyzer",
-    "rust-analyzer.cargo.extraEnv": {
-      "SKIP_WASM_BUILD": "1"
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "lldb.executable": "/usr/bin/lldb",
+        "rust-analyzer.check.run": "never",
+        "rust-analyzer.checkOnSave": false,
+        "rust-analyzer.cargo.targetDir": "target/rust-analyzer",
+        "rust-analyzer.cargo.extraEnv": {
+          "SKIP_WASM_BUILD": "1"
+        }
+      },
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "bungcip.better-toml",
+        "vadimcn.vscode-lldb"
+      ]
     }
   },
-  "extensions": [
-    "rust-lang.rust-analyzer",
-    "bungcip.better-toml",
-    "vadimcn.vscode-lldb"
-  ],
   "forwardPorts": [
     3000,
-    9944
+    9944,
+    30000,
+    30001,
+    30002,
+    30003,
+    30004
   ],
   "postCreateCommand": "sudo apt-get update && sudo apt-get install -y protobuf-compiler clang libclang-dev pkg-config libssl-dev && rustup toolchain install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly && bash .devcontainer/setup-ssh-konnex.sh",
   "menuActions": [
