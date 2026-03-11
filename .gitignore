@@ -49,3 +49,6 @@ bt.snap
 scripts/specs/local.json
 # Local-only: notes, playbooks, keys — not part of the repo
 ignored/
+
+# Local build / run logs
+logs/
