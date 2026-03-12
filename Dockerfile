@@ -1,7 +1,13 @@
+# syntax=docker/dockerfile:1
 # ------------------------------------------------------------------------------
 #  Subtensor Dockerfile (hardened)
 #  – Builds production and local binaries
 #  – Final runtime images run as non-root `subtensor` user (UID/GID 10001)
+#
+#  Incremental rebuilds: use BuildKit (DOCKER_BUILDKIT=1). Cargo registry, git
+#  sources, and target/ are persisted across builds via cache mounts — small
+#  source edits reuse compiled deps. Binaries are copied into /artifacts in the
+#  same RUN because cache mounts are not part of the image layer.
 # ------------------------------------------------------------------------------
 
 ###############################################################################
@@ -36,9 +42,15 @@ WORKDIR /build
 ###############################################################################
 FROM base_builder AS prod_builder
 
+RUN mkdir -p /artifacts
+
 # Build the production binary (profile defined in Cargo.toml)
-RUN cargo build -p node-subtensor --profile production --features "metadata-hash" --locked \
-  && test -e /build/target/production/node-subtensor  # sanity-check
+RUN --mount=type=cache,target=/build/target,id=subtensor-cargo-target \
+    --mount=type=cache,target=/root/.cargo/registry,id=subtensor-cargo-registry \
+    --mount=type=cache,target=/root/.cargo/git,id=subtensor-cargo-git \
+    cargo build -p node-subtensor --profile production --features "metadata-hash" --locked \
+    && install -m 755 /build/target/production/node-subtensor /artifacts/node-subtensor \
+    && test -e /artifacts/node-subtensor
 
 ###############################################################################
 # ---------- 3. Final production image (hardened) ----------------------------
@@ -58,7 +70,7 @@ WORKDIR /home/subtensor
 # Copy chainspecs and binary with correct ownership
 COPY --chown=subtensor:subtensor --from=prod_builder /build/*.json ./
 COPY --chown=subtensor:subtensor --from=prod_builder /build/chainspecs/*.json ./chainspecs/
-COPY --from=prod_builder /build/target/production/node-subtensor /usr/local/bin/
+COPY --from=prod_builder /artifacts/node-subtensor /usr/local/bin/node-subtensor
 RUN chown subtensor:subtensor /usr/local/bin/node-subtensor
 
 EXPOSE 30333 9933 9944
@@ -71,9 +83,15 @@ CMD ["--base-path","/data"]
 ###############################################################################
 FROM base_builder AS local_builder
 
+RUN mkdir -p /artifacts
+
 # Build the workspace in release mode with the pow-faucet feature
-RUN cargo build --workspace --profile release --features "pow-faucet" \
-  && test -e /build/target/release/node-subtensor  # sanity-check
+RUN --mount=type=cache,target=/build/target,id=subtensor-cargo-target \
+    --mount=type=cache,target=/root/.cargo/registry,id=subtensor-cargo-registry \
+    --mount=type=cache,target=/root/.cargo/git,id=subtensor-cargo-git \
+    cargo build --workspace --profile release --features "pow-faucet" \
+    && install -m 755 /build/target/release/node-subtensor /artifacts/node-subtensor \
+    && test -e /artifacts/node-subtensor
 
 ###############################################################################
 # ---------- 5. Final local image (hardened) ----------------------------------
@@ -90,7 +108,7 @@ WORKDIR /home/subtensor
 # Copy artifacts
 COPY --chown=subtensor:subtensor --from=local_builder /build/*.json ./
 COPY --chown=subtensor:subtensor --from=local_builder /build/chainspecs/*.json ./chainspecs/
-COPY --from=local_builder /build/target/release/node-subtensor /usr/local/bin/
+COPY --from=local_builder /artifacts/node-subtensor /usr/local/bin/node-subtensor
 RUN chown subtensor:subtensor /usr/local/bin/node-subtensor
 
 # Generate a local chainspec for convenience (run as root before user switch)
