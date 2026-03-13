@@ -117,16 +117,16 @@ impl<T: Config> Pallet<T> {
         if total_issuance >= I96F32::saturating_from_num(TotalSupply::<T>::get()) {
             return Ok(0);
         }
-        // Calculate the logarithmic residual of the issuance against half the total supply.
+        // Logarithmic residual: issuance relative to `TotalSupply` (must match the divisor
+        // historically `2 * half_supply`; keep tied to `TotalSupply::<T>` so the cap can change).
+        let total_supply = I96F32::saturating_from_num(TotalSupply::<T>::get());
         let residual: I96F32 = log2(
             I96F32::saturating_from_num(1.0)
                 .checked_div(
                     I96F32::saturating_from_num(1.0)
                         .checked_sub(
                             total_issuance
-                                .checked_div(I96F32::saturating_from_num(2.0).saturating_mul(
-                                    I96F32::saturating_from_num(10_500_000_000_000_000.0),
-                                ))
+                                .checked_div(total_supply)
                                 .ok_or("Logarithm calculation failed")?,
                         )
                         .ok_or("Logarithm calculation failed")?,

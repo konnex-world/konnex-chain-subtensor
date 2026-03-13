@@ -330,9 +330,9 @@ pub mod pallet {
         true
     }
     #[pallet::type_value]
-    /// Total Rao in circulation.
+    /// Asymptotic cap on `TotalIssuance` for emission curve (Konnex: 1B TAO in rao).
     pub fn TotalSupply<T: Config>() -> u64 {
-        21_000_000_000_000_000
+        1_000_000_000_000_000_000
     }
     #[pallet::type_value]
     /// Default Delegate Take.
