@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+# Dev / CI compile image: toolchain + OS deps only. Source is bind-mounted at run time.
+# Keep Rust channel/components in sync with ../rust-toolchain.toml (channel 1.87, wasm, rustc-dev, etc.).
+FROM rust:1.87-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    protobuf-compiler clang git pkg-config libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV RUST_BACKTRACE=1
+
+RUN rustup default 1.87 && \
+    rustup component add rust-src clippy rustfmt rustc-dev rust-analyzer && \
+    rustup target add wasm32-unknown-unknown
+
+WORKDIR /build
+# Override via compose: `docker compose ... run compile cargo …`
+CMD ["bash", "-lc", "echo 'Usage: docker compose -f docker-compose.build-dev.yml run --rm compile cargo build --workspace --profile release --features pow-faucet'"]

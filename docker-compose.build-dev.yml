@@ -1,0 +1,37 @@
+# Incremental compile: mount repo + persistent Cargo caches (no full-repo COPY per edit).
+#
+# Build image once (small context: ./docker only):
+#   docker compose -f docker-compose.build-dev.yml build
+#
+# Local node build (same invocation as Dockerfile local_builder stage):
+#   docker compose -f docker-compose.build-dev.yml run --rm compile \
+#     cargo build --workspace --profile release --features pow-faucet
+#
+# Tests:
+#   docker compose -f docker-compose.build-dev.yml run --rm compile \
+#     cargo test -p pallet-subtensor --locked
+#
+# Toolchain in docker/Dockerfile.build-dev must match rust-toolchain.toml.
+#
+# Docker-outside-of-docker: bind ".:/build" is resolved by the host daemon. If
+# /build looks empty inside the compile service, set an absolute host repo path
+# instead of "." for the first volume line.
+
+services:
+  compile:
+    build:
+      context: docker
+      dockerfile: Dockerfile.build-dev
+    working_dir: /build
+    volumes:
+      - .:/build
+      - build-dev-target:/build/target
+      - build-dev-cargo-registry:/root/.cargo/registry
+      - build-dev-cargo-git:/root/.cargo/git
+    environment:
+      RUST_BACKTRACE: "1"
+
+volumes:
+  build-dev-target:
+  build-dev-cargo-registry:
+  build-dev-cargo-git:
