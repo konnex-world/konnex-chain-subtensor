@@ -8,7 +8,7 @@ pub fn localnet_config(single_authority: bool) -> Result<ChainSpec, String> {
 
     // Give front-ends necessary data to present to users
     let mut properties = sc_service::Properties::new();
-    properties.insert("tokenSymbol".into(), "TAO".into());
+    properties.insert("tokenSymbol".into(), "KNX".into());
     properties.insert("tokenDecimals".into(), 9.into());
     properties.insert("ss58Format".into(), 42.into());
 
@@ -25,9 +25,9 @@ pub fn localnet_config(single_authority: bool) -> Result<ChainSpec, String> {
             ..Default::default()
         },
     )
-    .with_name("Bittensor")
-    .with_protocol_id("bittensor")
-    .with_id("bittensor")
+    .with_name("Konnex")
+    .with_protocol_id("konnex")
+    .with_id("konnex")
     .with_chain_type(ChainType::Development)
     .with_genesis_config_patch(localnet_genesis(
         // Initial PoA authorities (Validators)

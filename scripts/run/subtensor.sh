@@ -10,7 +10,8 @@ function run_command() {
   F_BIN_PATH=$3
 
   # Different command options by network and node type
-  MAINNET_BOOTNODE='--bootnodes /dns/bootnode.finney.chain.opentensor.ai/tcp/30333/ws/p2p/12D3KooWRwbMb85RWnT8DSXSYMWQtuDwh4LJzndoRrTDotTR5gDC'
+  # Add Konnex bootnodes here when available, e.g. MAINNET_BOOTNODE='--bootnodes /dns/...'
+  MAINNET_BOOTNODE=''
   TESTNET_BOOTNODE='--bootnodes /dns/bootnode.test.finney.opentensor.ai/tcp/30333/ws/p2p/12D3KooWPM4mLcKJGtyVtkggqdG84zWrd7Rij6PGQDoijh1X86Vr'
   NODE_TYPE_ARCHIVE='--pruning=archive'
   NODE_TYPE_LITE='--sync warp'
@@ -41,7 +42,7 @@ function run_command() {
   # Command to run subtensor
   $F_BIN_PATH \
     --base-path /tmp/blockchain \
-    --chain ./raw_spec_finney.json \
+    --chain mainnet \
     --rpc-external --rpc-cors all \
     --no-mdns \
     --rpc-max-connections 10000 \

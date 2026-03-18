@@ -76,7 +76,7 @@ RUN chown subtensor:subtensor /usr/local/bin/node-subtensor
 EXPOSE 30333 9933 9944
 USER subtensor
 ENTRYPOINT ["node-subtensor"]
-CMD ["--base-path","/data"]
+CMD ["--base-path","/data","--chain","mainnet"]
 
 ###############################################################################
 # ---------- 4. Local build stage --------------------------------------------

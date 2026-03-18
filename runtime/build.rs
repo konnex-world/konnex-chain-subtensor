@@ -13,7 +13,7 @@ fn main() {
             .with_current_project()
             .export_heap_base()
             .import_memory()
-            .enable_metadata_hash("TAO", 9)
+            .enable_metadata_hash("KNX", 9)
             .build();
     }
 }

@@ -34,11 +34,10 @@ services:
       - mainnet-lite-volume:/data
     command:
       - --base-path=/data
-      - --chain=./chainspecs/raw_spec_finney.json
+      - --chain=mainnet
       - --rpc-external
       - --rpc-cors=all
       - --no-mdns
-      - --bootnodes=/dns/bootnode.finney.chain.opentensor.ai/tcp/30333/ws/p2p/12D3KooWRwbMb85RWnT8DSXSYMWQtuDwh4LJzndoRrTDotTR5gDC
       - --sync=warp
 
   mainnet-archive:
@@ -48,11 +47,10 @@ services:
       - mainnet-archive-volume:/data
     command:
       - --base-path=/data
-      - --chain=./chainspecs/raw_spec_finney.json
+      - --chain=mainnet
       - --rpc-external
       - --rpc-cors=all
       - --no-mdns
-      - --bootnodes=/dns/bootnode.finney.chain.opentensor.ai/tcp/30333/ws/p2p/12D3KooWRwbMb85RWnT8DSXSYMWQtuDwh4LJzndoRrTDotTR5gDC
       - --pruning=archive
 
   testnet-lite:

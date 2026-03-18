@@ -9,8 +9,8 @@
 
 set -e
 
-raw_finney="chainspecs/raw_spec_finney.json"
-plain_finney="chainspecs/plain_spec_finney.json"
+raw_mainnet="chainspecs/raw_spec_mainnet.json"
+plain_mainnet="chainspecs/plain_spec_mainnet.json"
 raw_testfinney="chainspecs/raw_spec_testfinney.json"
 plain_testfinney="chainspecs/plain_spec_testfinney.json"
 raw_devnet="chainspecs/raw_spec_devnet.json"
@@ -63,12 +63,23 @@ update_spec() {
     "$plain_spec_temp"
 }
 
+ensure_mainnet_specs() {
+  if [[ ! -f "$raw_mainnet" ]] || [[ ! -f "$plain_mainnet" ]]; then
+    echo "*** Creating initial Konnex mainnet spec files (requires ./snapshot.json)..."
+    mkdir -p chainspecs
+    buildspec mainnet --raw >"$raw_mainnet"
+    buildspec mainnet >"$plain_mainnet"
+  fi
+}
+
 # SCRIPT
 
 echo "*** Building node..."
 cargo build -p node-subtensor
 
-update_spec finney "$raw_finney" "$plain_finney"
+ensure_mainnet_specs
+
+update_spec mainnet "$raw_mainnet" "$plain_mainnet"
 update_spec test_finney "$raw_testfinney" "$plain_testfinney"
 update_spec devnet "$raw_devnet" "$plain_devnet"
 

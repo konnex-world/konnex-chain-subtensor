@@ -2,8 +2,8 @@
 #![allow(clippy::unwrap_used)]
 
 pub mod devnet;
-pub mod finney;
 pub mod localnet;
+pub mod mainnet;
 pub mod testnet;
 
 use node_subtensor_runtime::{Block, WASM_BINARY};

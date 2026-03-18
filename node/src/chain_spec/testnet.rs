@@ -38,7 +38,7 @@ pub fn finney_testnet_config() -> Result<ChainSpec, String> {
 
     // Give front-ends necessary data to present to users
     let mut properties = sc_service::Properties::new();
-    properties.insert("tokenSymbol".into(), "testTAO".into());
+    properties.insert("tokenSymbol".into(), "tKNX".into());
     properties.insert("tokenDecimals".into(), 9.into());
     properties.insert("ss58Format".into(), 42.into());
 
@@ -49,14 +49,14 @@ pub fn finney_testnet_config() -> Result<ChainSpec, String> {
             ..Default::default()
         },
     )
-    .with_name("Bittensor")
+    .with_name("Konnex")
     .with_boot_nodes(vec![
         "/dns/bootnode.test.chain.opentensor.ai/tcp/30333/p2p/12D3KooWPM4mLcKJGtyVtkggqdG84zWrd7Rij6PGQDoijh1X86Vr"
             .parse()
             .unwrap(),
     ])
-    .with_protocol_id("bittensor")
-    .with_id("bittensor")
+    .with_protocol_id("konnex")
+    .with_id("konnex")
     .with_chain_type(ChainType::Development)
     .with_genesis_config_patch(testnet_genesis(
         // Initial PoA authorities (Validators)

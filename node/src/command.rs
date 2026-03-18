@@ -43,7 +43,7 @@ impl SubstrateCli for Cli {
         Ok(match id {
             "dev" => Box::new(chain_spec::localnet::localnet_config(true)?),
             "local" => Box::new(chain_spec::localnet::localnet_config(false)?),
-            "finney" => Box::new(chain_spec::finney::finney_mainnet_config()?),
+            "mainnet" => Box::new(chain_spec::mainnet::mainnet_config()?),
             "devnet" => Box::new(chain_spec::devnet::devnet_config()?),
             "" | "test_finney" => Box::new(chain_spec::testnet::finney_testnet_config()?),
             path => Box::new(chain_spec::ChainSpec::from_json_file(
