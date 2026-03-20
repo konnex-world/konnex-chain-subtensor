@@ -1,5 +1,68 @@
-//! Prototype escrow: funds sit on the pallet account; Root releases to payee or refunds payer.
-//! PoPW is **not** enforced on-chain yet — `release_escrow` stands in for "finalized attestation".
+//! # Konnex escrow (subnet-scoped task payments)
+//!
+//! Native-token escrow keyed by `(subnet_id, task_id)`. The **payer** locks funds on this
+//! pallet's account, names a **payee**, commits to a task with **`description_hash`** (e.g.
+//! SHA-256 of the description off-chain), nominates a **resolver committee**, and sets a
+//! **`deadline` block**. This is a FRAME pallet (on-chain module), not an EVM contract.
+//!
+//! ## Extrinsics (public calls)
+//!
+//! - `fund_escrow` — payer signs; transfers `amount` to the pallet pot and opens the escrow.
+//!   Must pass a future `deadline` (block number after which unresolved escrows may be
+//!   reclaimed by the payer).
+//! - `vote_on_escrow` — **resolver-only**; one vote per resolver: **approve** pays the payee,
+//!   **reject** refunds the payer, when a **strict majority** of resolvers agrees (`2*votes > n`).
+//! - `refund_after_deadline` — **payer-only**; after `deadline` if the escrow is still awaiting
+//!   resolution (no majority vote yet), the payer takes funds back. Not callable once funds
+//!   moved to the payee (**released**) or already returned (**refunded**), including after a
+//!   reject quorum.
+//!
+//! ## Typical workflow
+//!
+//! 1. **Payer** chooses `subnet_id`, unique `task_id`, `payee`, `amount`, `description_hash`,
+//!    resolver list, and `deadline` > current block.
+//! 2. Payer calls **`fund_escrow`** — balances move to the pallet; state is `AwaitingRelease`.
+//! 3. **Resolvers** (and only they) call **`vote_on_escrow`** with `approve = true/false`.
+//!    - If **strict majority approve** → full `amount` goes to **payee**; escrow `Released`.
+//!      The payer **cannot** use `refund_after_deadline` (wrong status).
+//!    - If **strict majority reject** → funds return to **payer**; escrow `Refunded`.
+//! 4. If the committee **never reaches a majority** before **`deadline`**, the **payer** calls
+//!    **`refund_after_deadline`** to recover funds (same economic outcome as “task not verified”).
+//! 5. Indexers/wallets read **`EscrowFunded`**, **`EscrowVoted`**, **`EscrowReleased`**, **`EscrowRefunded`**.
+//!
+//! ## Resolver committee (payer-chosen)
+//!
+//! At `fund_escrow`, the payer supplies a **bounded list of accounts** that are the only
+//! parties allowed to vote. **Who may arbitrate is explicit trust** chosen by the payer (no
+//! on-chain link to Subtensor `ValidatorPermit` in this pallet).
+//!
+//! ## Voting and settlement
+//!
+//! Each resolver may cast **at most one** ballot per escrow: **Approve** (pay the payee) or
+//! **Reject** (return funds to the payer). Settlement uses a **strict majority** of the resolver
+//! count (`2 * votes > n`). There is **no Root/sudo** release path.
+//!
+//! ## Deadline rules
+//!
+//! - `deadline` is a **block height** (must be **strictly greater** than the current block when
+//!   funding).
+//! - While status is `AwaitingRelease` and `block_number > deadline`, the **payer** may
+//!   **`refund_after_deadline`** if resolvers never reached a majority (stalemate / no decision).
+//! - After **`EscrowReleased`** (payee paid), the payer **cannot** reclaim funds on-chain via
+//!   this pallet; those balances belong to the payee per committee vote.
+//!
+//! ## Limits and safety
+//!
+//! - `task_id` and resolver list lengths are bounded via `Config::MaxTaskIdLen` and
+//!   `Config::MaxResolvers`.
+//! - Resolver list must be **non-empty**, **unique** (no duplicate accounts).
+//! - PoPW / off-chain verification is **not** enforced here; only resolver votes and deadlines.
+//!
+//! ## Storage layout
+//!
+//! - `Escrows`: active escrow records (includes `deadline`).
+//! - `Votes`: one ballot per `(escrow key, resolver)` while the escrow is open.
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -26,7 +89,7 @@ pub mod weights;
 pub use weights::WeightInfo;
 
 #[derive(
-	Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo,
+	Clone, Copy, PartialEq, Eq, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo,
 )]
 pub enum EscrowStatus {
 	AwaitingRelease,
@@ -34,12 +97,12 @@ pub enum EscrowStatus {
 	Refunded,
 }
 
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct EscrowRecord<AccountId, Balance> {
-	pub payer: AccountId,
-	pub payee: AccountId,
-	pub amount: Balance,
-	pub status: EscrowStatus,
+#[derive(
+	Clone, Copy, PartialEq, Eq, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo,
+)]
+pub enum Ballot {
+	Approve,
+	Reject,
 }
 
 #[frame_support::pallet]
@@ -53,6 +116,26 @@ pub mod pallet {
 
 	pub type EscrowKey<T> = (u16, TaskId<T>);
 
+	#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, MaxEncodedLen, TypeInfo)]
+	#[scale_info(skip_type_params(T))]
+	pub struct EscrowRecord<T: Config>
+	where
+		T::AccountId: MaxEncodedLen,
+		BalanceOf<T>: MaxEncodedLen,
+		BlockNumberFor<T>: MaxEncodedLen,
+	{
+		pub payer: T::AccountId,
+		pub payee: T::AccountId,
+		pub amount: BalanceOf<T>,
+		/// Commitment to the task description (e.g. SHA-256); full text stays off-chain.
+		pub description_hash: [u8; 32],
+		/// Accounts that may vote to release or refund (chosen by the payer at funding).
+		pub resolvers: BoundedVec<T::AccountId, T::MaxResolvers>,
+		/// Block height after which the payer may `refund_after_deadline` if still unresolved.
+		pub deadline: BlockNumberFor<T>,
+		pub status: EscrowStatus,
+	}
+
 	#[pallet::pallet]
 	pub struct Pallet<T>(_);
 
@@ -64,6 +147,9 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 		#[pallet::constant]
 		type MaxTaskIdLen: Get<u32>;
+		/// Maximum resolvers the payer may nominate for one escrow.
+		#[pallet::constant]
+		type MaxResolvers: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -75,6 +161,15 @@ pub mod pallet {
 			payer: T::AccountId,
 			payee: T::AccountId,
 			amount: BalanceOf<T>,
+			description_hash: [u8; 32],
+			deadline: BlockNumberFor<T>,
+			resolver_count: u32,
+		},
+		EscrowVoted {
+			subnet_id: u16,
+			task_id: Vec<u8>,
+			voter: T::AccountId,
+			approve: bool,
 		},
 		EscrowReleased {
 			subnet_id: u16,
@@ -96,6 +191,13 @@ pub mod pallet {
 		NotFound,
 		WrongStatus,
 		ZeroAmount,
+		EmptyResolverSet,
+		DuplicateResolver,
+		NotResolver,
+		AlreadyVoted,
+		DeadlineInPast,
+		DeadlineNotPassed,
+		NotPayer,
 	}
 
 	#[pallet::storage]
@@ -103,7 +205,19 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		EscrowKey<T>,
-		EscrowRecord<T::AccountId, BalanceOf<T>>,
+		EscrowRecord<T>,
+		OptionQuery,
+	>;
+
+	/// One ballot per resolver per escrow key (`Approve` / `Reject`).
+	#[pallet::storage]
+	pub type Votes<T: Config> = StorageDoubleMap<
+		_,
+		Blake2_128Concat,
+		EscrowKey<T>,
+		Blake2_128Concat,
+		T::AccountId,
+		Ballot,
 		OptionQuery,
 	>;
 
@@ -111,11 +225,45 @@ pub mod pallet {
 		pub fn pallet_account() -> T::AccountId {
 			T::PalletId::get().into_account_truncating()
 		}
+
+		fn ensure_unique_resolvers(resolvers: &[T::AccountId]) -> DispatchResult {
+			ensure!(!resolvers.is_empty(), Error::<T>::EmptyResolverSet);
+			for (i, a) in resolvers.iter().enumerate() {
+				for b in resolvers.iter().skip(i + 1) {
+					ensure!(a != b, Error::<T>::DuplicateResolver);
+				}
+			}
+			Ok(())
+		}
+
+		fn count_votes(key: &EscrowKey<T>, rec: &EscrowRecord<T>) -> (u32, u32) {
+			let mut approve = 0u32;
+			let mut reject = 0u32;
+			for who in rec.resolvers.iter() {
+				match Votes::<T>::get(key, who) {
+					Some(Ballot::Approve) => approve = approve.saturating_add(1),
+					Some(Ballot::Reject) => reject = reject.saturating_add(1),
+					None => {}
+				}
+			}
+			(approve, reject)
+		}
+
+		fn clear_votes(key: &EscrowKey<T>, rec: &EscrowRecord<T>) {
+			for who in rec.resolvers.iter() {
+				Votes::<T>::remove(key, who);
+			}
+		}
+
+		/// Strict majority: `2 * votes > n` (e.g. 2-of-3, 3-of-5).
+		fn strict_majority(votes: u32, n: u32) -> bool {
+			n > 0 && votes.saturating_mul(2) > n
+		}
 	}
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		/// Lock `amount` from origin and record escrow for `(subnet_id, task_id)`.
+		/// Lock `amount` from the signer (payer), store `EscrowRecord` at `(subnet_id, task_id)`.
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::fund_escrow())]
 		pub fn fund_escrow(
@@ -124,9 +272,16 @@ pub mod pallet {
 			task_id: TaskId<T>,
 			payee: T::AccountId,
 			amount: BalanceOf<T>,
+			description_hash: [u8; 32],
+			deadline: BlockNumberFor<T>,
+			resolvers: BoundedVec<T::AccountId, T::MaxResolvers>,
 		) -> DispatchResult {
 			let payer = ensure_signed(origin)?;
 			ensure!(!amount.is_zero(), Error::<T>::ZeroAmount);
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(deadline > now, Error::<T>::DeadlineInPast);
+
+			Self::ensure_unique_resolvers(resolvers.as_slice())?;
 
 			let key: EscrowKey<T> = (subnet_id, task_id.clone());
 			ensure!(!Escrows::<T>::contains_key(&key), Error::<T>::AlreadyExists);
@@ -134,12 +289,16 @@ pub mod pallet {
 			let pot = Self::pallet_account();
 			T::Currency::transfer(&payer, &pot, amount, Preservation::Expendable)?;
 
+			let resolver_count = resolvers.len() as u32;
 			Escrows::<T>::insert(
-				key,
+				key.clone(),
 				EscrowRecord {
 					payer: payer.clone(),
 					payee: payee.clone(),
 					amount,
+					description_hash,
+					resolvers,
+					deadline,
 					status: EscrowStatus::AwaitingRelease,
 				},
 			);
@@ -150,19 +309,24 @@ pub mod pallet {
 				payer,
 				payee,
 				amount,
+				description_hash,
+				deadline,
+				resolver_count,
 			});
 			Ok(())
 		}
 
-		/// Prototype: Root only. Transfers locked funds to `payee` (simulates PoPW-approved release).
+		/// Resolver-only: vote to pay the payee (`approve == true`) or refund the payer (`false`).
+		/// When a strict majority of resolvers agrees on one side, funds move and votes are cleared.
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::release_escrow())]
-		pub fn release_escrow(
+		#[pallet::weight(T::WeightInfo::vote_on_escrow())]
+		pub fn vote_on_escrow(
 			origin: OriginFor<T>,
 			subnet_id: u16,
 			task_id: TaskId<T>,
+			approve: bool,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			let voter = ensure_signed(origin)?;
 
 			let key: EscrowKey<T> = (subnet_id, task_id.clone());
 			let mut rec = Escrows::<T>::get(&key).ok_or(Error::<T>::NotFound)?;
@@ -170,47 +334,96 @@ pub mod pallet {
 				rec.status == EscrowStatus::AwaitingRelease,
 				Error::<T>::WrongStatus
 			);
+			ensure!(
+				rec.resolvers.iter().any(|r| r == &voter),
+				Error::<T>::NotResolver
+			);
+			ensure!(
+				!Votes::<T>::contains_key(&key, &voter),
+				Error::<T>::AlreadyVoted
+			);
+
+			let ballot = if approve {
+				Ballot::Approve
+			} else {
+				Ballot::Reject
+			};
+			Votes::<T>::insert(&key, &voter, ballot);
+
+			Self::deposit_event(Event::EscrowVoted {
+				subnet_id,
+				task_id: task_id.clone().into_inner(),
+				voter,
+				approve,
+			});
+
+			let n = rec.resolvers.len() as u32;
+			let (approve_votes, reject_votes) = Self::count_votes(&key, &rec);
 
 			let pot = Self::pallet_account();
-			let payee = rec.payee.clone();
-			let amount = rec.amount;
-			T::Currency::transfer(&pot, &payee, amount, Preservation::Expendable)?;
 
-			rec.status = EscrowStatus::Released;
-			Escrows::<T>::insert(&key, rec);
+			if Self::strict_majority(approve_votes, n) {
+				let payee = rec.payee.clone();
+				let amount = rec.amount;
+				T::Currency::transfer(&pot, &payee, amount, Preservation::Expendable)?;
+				rec.status = EscrowStatus::Released;
+				Self::clear_votes(&key, &rec);
+				Escrows::<T>::insert(&key, rec);
+				Self::deposit_event(Event::EscrowReleased {
+					subnet_id,
+					task_id: task_id.into_inner(),
+					payee,
+					amount,
+				});
+			} else if Self::strict_majority(reject_votes, n) {
+				let payer = rec.payer.clone();
+				let amount = rec.amount;
+				T::Currency::transfer(&pot, &payer, amount, Preservation::Expendable)?;
+				rec.status = EscrowStatus::Refunded;
+				Self::clear_votes(&key, &rec);
+				Escrows::<T>::insert(&key, rec);
+				Self::deposit_event(Event::EscrowRefunded {
+					subnet_id,
+					task_id: task_id.into_inner(),
+					payer,
+					amount,
+				});
+			} else {
+				Escrows::<T>::insert(&key, rec);
+			}
 
-			Self::deposit_event(Event::EscrowReleased {
-				subnet_id,
-				task_id: task_id.into_inner(),
-				payee,
-				amount,
-			});
 			Ok(())
 		}
 
-		/// Prototype: Root returns funds to payer.
+		/// Payer-only: if `block_number > deadline` and the escrow never reached a majority (still
+		/// `AwaitingRelease`), return locked funds to the payer. See module-level docs.
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::refund_escrow())]
-		pub fn refund_escrow(
+		#[pallet::weight(T::WeightInfo::refund_after_deadline())]
+		pub fn refund_after_deadline(
 			origin: OriginFor<T>,
 			subnet_id: u16,
 			task_id: TaskId<T>,
 		) -> DispatchResult {
-			ensure_root(origin)?;
+			let who = ensure_signed(origin)?;
 
 			let key: EscrowKey<T> = (subnet_id, task_id.clone());
-			let mut rec = Escrows::<T>::get(&key).ok_or(Error::<T>::NotFound)?;
+			let rec = Escrows::<T>::get(&key).ok_or(Error::<T>::NotFound)?;
+			ensure!(rec.payer == who, Error::<T>::NotPayer);
 			ensure!(
 				rec.status == EscrowStatus::AwaitingRelease,
 				Error::<T>::WrongStatus
 			);
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(now > rec.deadline, Error::<T>::DeadlineNotPassed);
 
 			let pot = Self::pallet_account();
 			let payer = rec.payer.clone();
 			let amount = rec.amount;
 			T::Currency::transfer(&pot, &payer, amount, Preservation::Expendable)?;
 
+			let mut rec = rec;
 			rec.status = EscrowStatus::Refunded;
+			Self::clear_votes(&key, &rec);
 			Escrows::<T>::insert(&key, rec);
 
 			Self::deposit_event(Event::EscrowRefunded {
@@ -225,3 +438,8 @@ pub mod pallet {
 }
 
 pub use pallet::*;
+
+#[cfg(test)]
+mod mock;
+#[cfg(test)]
+mod tests;

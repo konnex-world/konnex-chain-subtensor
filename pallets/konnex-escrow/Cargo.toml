@@ -1,7 +1,7 @@
 [package]
 name = "pallet-konnex-escrow"
 version = "0.1.0"
-description = "Prototype subnet-scoped escrow (Konnex demo; unstable API)."
+description = "Subnet-scoped native-token escrow with payer-chosen resolver voting (Konnex)."
 authors = ["Konnex"]
 edition = "2024"
 license = "Unlicense"
@@ -21,6 +21,10 @@ frame-system = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
+[dev-dependencies]
+pallet-balances = { workspace = true }
+sp-io = { workspace = true }
+
 [features]
 default = ["std"]
 std = [
@@ -30,4 +34,6 @@ std = [
 	"scale-info/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"pallet-balances/std",
+	"sp-io/std",
 ]

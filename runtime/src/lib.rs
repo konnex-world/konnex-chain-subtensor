@@ -217,7 +217,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
     //   `spec_version`, and `authoring_version` are the same between Wasm and native.
     // This value is set to 100 to notify Polkadot-JS App (https://polkadot.js.org/apps) to use
     //   the compatible custom types.
-    spec_version: 287,
+    spec_version: 290,
     impl_version: 1,
     apis: RUNTIME_API_VERSIONS,
     transaction_version: 1,
@@ -1548,6 +1548,7 @@ impl pallet_konnex_escrow::Config for Runtime {
     type PalletId = KonnexEscrowPalletId;
     type WeightInfo = pallet_konnex_escrow::weights::SubstrateWeight<Runtime>;
     type MaxTaskIdLen = ConstU32<128>;
+    type MaxResolvers = ConstU32<32>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

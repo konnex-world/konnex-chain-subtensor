@@ -7574,8 +7574,10 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "pallet-balances",
  "parity-scale-codec",
  "scale-info",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
