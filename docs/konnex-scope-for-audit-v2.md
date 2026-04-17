@@ -1,39 +1,45 @@
-# Konnex — scope for audit (v2)
+# Konnex — audit scope (v2)
 
-Черновик: список **будет дополняться** по мере согласования чартера. Ниже: escrow + **`epoch`** (`run_epoch`) + цепочка **coinbase** (эмиссия блока → шаг блока → раздача).
+Draft: this list **may grow** as the audit charter is finalized. In scope: **Konnex escrow** + Subtensor **`epoch`** (`run_epoch.rs`) + **coinbase** chain (per-block emission → block step → distribution).
 
-**Ветка репозитория, под которую зафиксирован этот документ:** **`main`**.
+**Repository branch this document refers to:** **`main`**.
 
 ---
 
-## Аудируемый коммит (снапшот) и upstream baseline
+## Audit snapshot and upstream baseline
 
-### Konnex (что сравниваем / что отдаём аудиторам)
+### Konnex (fork under review)
 
-**`e8dd5fb284c53dcb6ec8fea7d0c6e238ec8dea25`** (`e8dd5fb28`) — *Add matplotlib script to generate Konnex escrow flowcharts.*
+**`e8dd5fb284c53dcb6ec8fea7d0c6e238ec8dea25`** (`e8dd5fb28`)
 
-При смене ветки или тега для аудита **обновите этот раздел** на актуальный `git rev-parse HEAD`.
+| | |
+|--|--|
+| **GitLab** | https://git.konnex.world/ |
+| **Repository** | https://git.konnex.world/vlads/konnex-chain-subtensor |
+| **Branch** | `main` |
 
-### Upstream Bittensor / Subtensor (точка форка)
+When the audited branch or tag changes, **update this section** (e.g. `git rev-parse HEAD`).
 
-**Репозиторий:** [opentensor/subtensor](https://github.com/opentensor/subtensor) (нода и паллеты сети Bittensor / Subtensor).
+### Upstream Bittensor / Subtensor (fork point)
 
-**Baseline (коммит upstream на момент ветвления форка):**  
+**Repository:** [opentensor/subtensor](https://github.com/opentensor/subtensor) (Bittensor / Subtensor node and pallets).
+
+**Baseline (upstream commit at fork time):**  
 **`e9bbb6134984b1f9f63f5e55408faad7628eb059`**
 
-Дифф форка относительно baseline (см. также внутренний черновик `ignored/konnex-diff-for-audit.md`, если есть в клоне):
+Fork diff against baseline:
 
 ```bash
 git diff e9bbb6134984b1f9f63f5e55408faad7628eb059..HEAD
 ```
 
-Если в вашем клоне другое имя remotes, baseline можно перепроверить: `git merge-base HEAD <upstream-remote>/main` (или ветка, от которой делали fork).
+If your remote names differ, re-check with: `git merge-base HEAD <upstream-remote>/main` (or the branch you forked from).
 
 ---
 
-## 1. Скоуп на аудит (обязательные исходники)
+## 1. Mandatory audit scope (source files)
 
-Инструмент: **`cloc` 2.04** (`cloc --by-file …`).
+Tool: **`cloc` 2.04** (`cloc --by-file …`).
 
 ### 1.1 `pallets/konnex-escrow/src/`
 
@@ -77,7 +83,7 @@ pallets/subtensor/src/coinbase/
 | `pallets/subtensor/src/coinbase/run_coinbase.rs` | 986 | 89 | 194 | 703 |
 | **Subtotal** | **1404** | **111** | **295** | **998** |
 
-### 1.4 Итого обязательный скоуп (§1.1 + §1.2 + §1.3)
+### 1.4 Mandatory scope total (§1.1 + §1.2 + §1.3)
 
 | | Total | Blank | Comment | Code |
 |--|------:|------:|--------:|-----:|
@@ -85,9 +91,9 @@ pallets/subtensor/src/coinbase/
 
 ---
 
-## 2. Вспомогательные файлы на аудит (тесты и моки)
+## 2. Supporting files (tests and mocks)
 
-Исключаются из основного бюджета строк §1, но перечислены для контекста и регрессий.
+Out of the §1 line budget, but listed for context and regressions.
 
 | Path | Role | Total | Blank | Comment | Code |
 |------|------|------:|------:|--------:|-----:|
