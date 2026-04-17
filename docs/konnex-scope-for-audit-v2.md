@@ -1,6 +1,6 @@
 # Konnex — scope for audit (v2)
 
-Черновик: список **будет дополняться** по мере согласования чартера. Ниже: escrow + цепочка **coinbase** (эмиссия блока → шаг блока → раздача).
+Черновик: список **будет дополняться** по мере согласования чартера. Ниже: escrow + **`epoch`** (`run_epoch`) + цепочка **coinbase** (эмиссия блока → шаг блока → раздача).
 
 **Ветка репозитория, под которую зафиксирован этот документ:** **`main`**.
 
@@ -49,7 +49,19 @@ pallets/konnex-escrow/src/
 | `pallets/konnex-escrow/src/weights.rs` | 42 | 5 | 2 | 35 |
 | **Subtotal** | **487** | **48** | **77** | **362** |
 
-### 1.2 `pallets/subtensor/src/coinbase/`
+### 1.2 `pallets/subtensor/src/epoch/`
+
+```
+pallets/subtensor/src/epoch/
+└── run_epoch.rs
+```
+
+| Path | Total | Blank | Comment | Code |
+|------|------:|------:|--------:|-----:|
+| `pallets/subtensor/src/epoch/run_epoch.rs` | 1396 | 189 | 303 | 904 |
+| **Subtotal** | **1396** | **189** | **303** | **904** |
+
+### 1.3 `pallets/subtensor/src/coinbase/`
 
 ```
 pallets/subtensor/src/coinbase/
@@ -65,11 +77,11 @@ pallets/subtensor/src/coinbase/
 | `pallets/subtensor/src/coinbase/run_coinbase.rs` | 986 | 89 | 194 | 703 |
 | **Subtotal** | **1404** | **111** | **295** | **998** |
 
-### 1.3 Итого обязательный скоуп (§1.1 + §1.2)
+### 1.4 Итого обязательный скоуп (§1.1 + §1.2 + §1.3)
 
 | | Total | Blank | Comment | Code |
 |--|------:|------:|--------:|-----:|
-| **Sum** | **1891** | **159** | **372** | **1360** |
+| **Sum** | **3287** | **348** | **675** | **2264** |
 
 ---
 
