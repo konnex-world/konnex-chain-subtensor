@@ -104,11 +104,17 @@ impl<T: Config> Pallet<T> {
     /// * 'Result<u64, &'static str>': The calculated block emission rate or error.
     ///
     pub fn get_block_emission() -> Result<u64, &'static str> {
-        // Convert the total issuance to a fixed-point number for calculation.
-        Self::get_block_emission_for_issuance(Self::get_total_issuance())
+        let block_emission_u64 = Self::get_block_emission_for_issuance(Self::get_total_issuance())?;
+        if BlockEmission::<T>::get() != block_emission_u64 {
+            BlockEmission::<T>::put(block_emission_u64);
+        }
+        Ok(block_emission_u64)
     }
 
-    /// Returns the block emission for an issuance value.
+    /// Returns the block emission curve value for an issuance input.
+    ///
+    /// This is **side-effect free**: it does not update `BlockEmission` storage.
+    /// Call `get_block_emission` to compute from total issuance and persist the global snapshot.
     pub fn get_block_emission_for_issuance(issuance: u64) -> Result<u64, &'static str> {
         // Convert issuance to a float for calculations below.
         let total_issuance: I96F32 = I96F32::saturating_from_num(issuance);
@@ -151,9 +157,6 @@ impl<T: Config> Pallet<T> {
             .saturating_mul(I96F32::saturating_from_num(DefaultBlockEmission::<T>::get()));
         // Convert to u64
         let block_emission_u64: u64 = block_emission.saturating_to_num::<u64>();
-        if BlockEmission::<T>::get() != block_emission_u64 {
-            BlockEmission::<T>::put(block_emission_u64);
-        }
         Ok(block_emission_u64)
     }
 }
