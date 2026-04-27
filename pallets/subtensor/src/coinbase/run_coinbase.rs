@@ -200,22 +200,36 @@ impl<T: Config> Pallet<T> {
                 tou64!(root_alpha),
                 T::SwapInterface::min_price(),
             );
-            if let Ok(ok_result) = swap_result {
-                let root_tao: u64 = ok_result.amount_paid_out;
+            match swap_result {
+                Ok(ok_result) => {
+                    let root_tao: u64 = ok_result.amount_paid_out;
 
-                log::debug!("root_tao: {:?}", root_tao);
-                // Accumulate alpha emission in pending.
-                PendingAlphaSwapped::<T>::mutate(*netuid_i, |total| {
-                    *total = total.saturating_add(tou64!(root_alpha));
-                });
-                // Accumulate alpha emission in pending.
-                PendingEmission::<T>::mutate(*netuid_i, |total| {
-                    *total = total.saturating_add(tou64!(pending_alpha));
-                });
-                // Accumulate root divs for subnet.
-                PendingRootDivs::<T>::mutate(*netuid_i, |total| {
-                    *total = total.saturating_add(root_tao);
-                });
+                    log::debug!("root_tao: {:?}", root_tao);
+                    // Accumulate alpha emission in pending.
+                    PendingAlphaSwapped::<T>::mutate(*netuid_i, |total| {
+                        *total = total.saturating_add(tou64!(root_alpha));
+                    });
+                    // Accumulate alpha emission in pending.
+                    PendingEmission::<T>::mutate(*netuid_i, |total| {
+                        *total = total.saturating_add(tou64!(pending_alpha));
+                    });
+                    // Accumulate root divs for subnet.
+                    PendingRootDivs::<T>::mutate(*netuid_i, |total| {
+                        *total = total.saturating_add(root_tao);
+                    });
+                }
+                Err(e) => {
+                    // On swap failure we keep the full alpha_out on the subnet pending path.
+                    // This avoids silently dropping root_alpha/pending_alpha accounting.
+                    log::warn!(
+                        "Failed to swap root alpha for subnet {}: {:?}. Falling back to pending alpha distribution.",
+                        netuid_i,
+                        e
+                    );
+                    PendingEmission::<T>::mutate(*netuid_i, |total| {
+                        *total = total.saturating_add(tou64!(alpha_out_i));
+                    });
+                }
             }
         }
 
