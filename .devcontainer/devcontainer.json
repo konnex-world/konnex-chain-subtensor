@@ -9,6 +9,12 @@
       "moby": false
     }
   },
+  "mounts": [
+    "source=knx-subtensor-cargo-target,target=/cargo-target,type=volume"
+  ],
+  "containerEnv": {
+    "CARGO_TARGET_DIR": "/cargo-target"
+  },
   "customizations": {
     "vscode": {
       "settings": {
@@ -16,7 +22,7 @@
         "lldb.executable": "/usr/bin/lldb",
         "rust-analyzer.check.run": "never",
         "rust-analyzer.checkOnSave": false,
-        "rust-analyzer.cargo.targetDir": "target/rust-analyzer",
+        "rust-analyzer.cargo.targetDir": "/cargo-target/rust-analyzer",
         "rust-analyzer.cargo.extraEnv": {
           "SKIP_WASM_BUILD": "1"
         }
@@ -37,7 +43,7 @@
     30003,
     30004
   ],
-  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y protobuf-compiler clang libclang-dev pkg-config libssl-dev && rustup toolchain install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly && bash .devcontainer/setup-ssh-konnex.sh",
+  "postCreateCommand": "sudo chown -R vscode:vscode /cargo-target && sudo apt-get update && sudo apt-get install -y protobuf-compiler clang libclang-dev pkg-config libssl-dev && rustup toolchain install nightly && rustup target add wasm32-unknown-unknown --toolchain nightly && bash .devcontainer/setup-ssh-konnex.sh",
   "menuActions": [
     {
       "id": "polkadotjs",
