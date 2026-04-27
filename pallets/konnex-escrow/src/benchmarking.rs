@@ -98,11 +98,12 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(RawOrigin::Signed(voter), 1u16, task_id.clone(), true);
 
-		let rec_after = Escrows::<T>::get(key).unwrap();
-		assert!(matches!(
-			rec_after.status,
-			EscrowStatus::AwaitingRelease | EscrowStatus::Released | EscrowStatus::Refunded
-		));
+		match Escrows::<T>::get(&key) {
+			Some(rec_after) => assert_eq!(rec_after.status, EscrowStatus::AwaitingRelease),
+			None => {
+				// Single-vote strict majority: row removed after release (N8).
+			}
+		}
 	}
 
 	#[benchmark]
@@ -118,7 +119,6 @@ mod benchmarks {
 		#[extrinsic_call]
 		_(RawOrigin::Signed(payer), 1u16, task_id.clone());
 
-		let rec = Escrows::<T>::get(key).unwrap();
-		assert_eq!(rec.status, EscrowStatus::Refunded);
+		assert!(Escrows::<T>::get(&key).is_none());
 	}
 }

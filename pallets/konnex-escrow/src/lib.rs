@@ -65,8 +65,11 @@
 //!
 //! ## Storage layout
 //!
-//! - `Escrows`: active escrow records (includes `deadline`).
-//! - `Votes`: one ballot per `(escrow key, resolver)` while the escrow is open.
+//! - `Escrows`: **open** escrows only (`AwaitingRelease`). Rows are **`remove`d** after
+//!   **Released**, **Refunded** (vote or deadline), or equivalent settlement — use events for
+//!   history (N8).
+//! - `Votes`: one ballot per `(escrow key, resolver)` while the escrow is open (cleared before
+//!   removal).
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -273,6 +276,9 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		/// Lock `amount` from the signer (payer), store `EscrowRecord` at `(subnet_id, task_id)`.
+		///
+		/// `AlreadyExists` only while an **open** escrow occupies the key; after release or refund
+		/// the storage row is removed and the same `(subnet_id, task_id)` may be funded again (N8).
 		#[pallet::call_index(0)]
 		#[pallet::weight(T::WeightInfo::fund_escrow(resolvers.len() as u32))]
 		pub fn fund_escrow(
@@ -377,9 +383,8 @@ pub mod pallet {
 				let payee = rec.payee.clone();
 				let amount = rec.amount;
 				T::Currency::transfer(&pot, &payee, amount, Preservation::Expendable)?;
-				rec.status = EscrowStatus::Released;
 				Self::clear_votes(&key, &rec);
-				Escrows::<T>::insert(&key, rec);
+				Escrows::<T>::remove(&key);
 				Self::deposit_event(Event::EscrowReleased {
 					subnet_id,
 					task_id: task_id.into_inner(),
@@ -390,9 +395,8 @@ pub mod pallet {
 				let payer = rec.payer.clone();
 				let amount = rec.amount;
 				T::Currency::transfer(&pot, &payer, amount, Preservation::Expendable)?;
-				rec.status = EscrowStatus::Refunded;
 				Self::clear_votes(&key, &rec);
-				Escrows::<T>::insert(&key, rec);
+				Escrows::<T>::remove(&key);
 				Self::deposit_event(Event::EscrowRefunded {
 					subnet_id,
 					task_id: task_id.into_inner(),
@@ -432,10 +436,8 @@ pub mod pallet {
 			let amount = rec.amount;
 			T::Currency::transfer(&pot, &payer, amount, Preservation::Expendable)?;
 
-			let mut rec = rec;
-			rec.status = EscrowStatus::Refunded;
 			Self::clear_votes(&key, &rec);
-			Escrows::<T>::insert(&key, rec);
+			Escrows::<T>::remove(&key);
 
 			Self::deposit_event(Event::EscrowRefunded {
 				subnet_id,

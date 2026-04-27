@@ -75,14 +75,13 @@ fn fund_then_majority_approve_releases_to_payee() {
 			true,
 		));
 
-		let rec = Escrows::<Test>::get((1u16, tid.clone())).unwrap();
-		assert_eq!(rec.status, EscrowStatus::Released);
+		assert!(!Escrows::<Test>::contains_key((1u16, tid.clone())));
 		assert_eq!(Balances::balance(&payee), 1_000 + amount);
 		assert_eq!(Balances::balance(&pot), 0);
 
 		assert_noop!(
 			Pallet::<Test>::refund_after_deadline(RuntimeOrigin::signed(1), 1, tid,),
-			Error::<Test>::WrongStatus
+			Error::<Test>::NotFound
 		);
 	});
 }
@@ -119,14 +118,13 @@ fn majority_reject_refunds_payer() {
 			false,
 		));
 
-		let rec = Escrows::<Test>::get((0u16, tid.clone())).unwrap();
-		assert_eq!(rec.status, EscrowStatus::Refunded);
+		assert!(!Escrows::<Test>::contains_key((0u16, tid.clone())));
 		assert_eq!(Balances::balance(&1), 1_000);
 		assert_eq!(Balances::balance(&pot), 0);
 
 		assert_noop!(
 			Pallet::<Test>::refund_after_deadline(RuntimeOrigin::signed(1), 0, tid,),
-			Error::<Test>::WrongStatus
+			Error::<Test>::NotFound
 		);
 	});
 }
@@ -283,8 +281,7 @@ fn refund_after_deadline_returns_to_payer() {
 		));
 		assert_eq!(Balances::balance(&1), 1_000);
 		assert_eq!(Balances::balance(&pot), 0);
-		let rec = Escrows::<Test>::get((0u16, tid.clone())).unwrap();
-		assert_eq!(rec.status, EscrowStatus::Refunded);
+		assert!(!Escrows::<Test>::contains_key((0u16, tid.clone())));
 		let key = escrow_key(0, &tid);
 		assert!(Votes::<Test>::get(&key, &3u64).is_none());
 	});
@@ -338,10 +335,7 @@ fn vote_on_escrow_ok_at_deadline_block() {
 			tid.clone(),
 			true,
 		));
-		assert_eq!(
-			Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status,
-			EscrowStatus::Released
-		);
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
 		assert_eq!(Balances::balance(&2), 1_000 + amount);
 		assert_eq!(Balances::balance(&pot), 0);
 	});
@@ -373,10 +367,7 @@ fn refund_after_deadline_succeeds_when_vote_blocked_after_deadline() {
 			0,
 			tid.clone(),
 		));
-		assert_eq!(
-			Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status,
-			EscrowStatus::Refunded
-		);
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
 	});
 }
 
@@ -427,7 +418,7 @@ fn single_resolver_approve_releases_on_first_vote() {
 			tid.clone(),
 			true,
 		));
-		assert_eq!(Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status, EscrowStatus::Released);
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
 		assert_eq!(Balances::balance(&2), 1_000 + amount);
 		assert_eq!(Balances::balance(&pot), 0);
 	});
@@ -456,7 +447,7 @@ fn single_resolver_reject_refunds_on_first_vote() {
 			tid.clone(),
 			false,
 		));
-		assert_eq!(Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status, EscrowStatus::Refunded);
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
 		assert_eq!(Balances::balance(&1), 1_000);
 		assert_eq!(Balances::balance(&pot), 0);
 	});
@@ -517,7 +508,7 @@ fn five_resolvers_majority_on_third_approve() {
 				true,
 			));
 		}
-		assert_eq!(Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status, EscrowStatus::Released);
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
 		assert_eq!(Balances::balance(&2), 1_000 + amount);
 	});
 }
@@ -553,10 +544,7 @@ fn two_resolvers_first_vote_does_not_settle() {
 			tid.clone(),
 			true,
 		));
-		assert_eq!(
-			Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status,
-			EscrowStatus::Released
-		);
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
 	});
 }
 
@@ -600,10 +588,43 @@ fn four_resolvers_stalemate_two_two_then_refund_after_deadline() {
 		));
 		assert_eq!(Balances::balance(&1), 1_000);
 		assert_eq!(Balances::balance(&pot), 0);
-		assert_eq!(
-			Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status,
-			EscrowStatus::Refunded
-		);
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
+	});
+}
+
+#[test]
+fn fund_same_task_id_after_release_allowed() {
+	new_test_ext().execute_with(|| {
+		let tid = task_id(b"reuse-key");
+		let only_r = 3u64;
+		assert_ok!(Pallet::<Test>::fund_escrow(
+			RuntimeOrigin::signed(1),
+			0,
+			tid.clone(),
+			2,
+			10,
+			[0u8; 32],
+			FAR_DEADLINE,
+			resolvers(&[only_r]),
+		));
+		assert_ok!(Pallet::<Test>::vote_on_escrow(
+			RuntimeOrigin::signed(only_r),
+			0,
+			tid.clone(),
+			true,
+		));
+		assert!(!Escrows::<Test>::contains_key(escrow_key(0, &tid)));
+		assert_ok!(Pallet::<Test>::fund_escrow(
+			RuntimeOrigin::signed(1),
+			0,
+			tid.clone(),
+			2,
+			5,
+			[1u8; 32],
+			FAR_DEADLINE,
+			resolvers(&[4]),
+		));
+		assert!(Escrows::<Test>::contains_key(escrow_key(0, &tid)));
 	});
 }
 
@@ -680,7 +701,7 @@ fn refund_after_deadline_missing_escrow_fails() {
 }
 
 #[test]
-fn vote_after_released_fails_wrong_status() {
+fn vote_after_released_fails_not_found() {
 	new_test_ext().execute_with(|| {
 		let tid = task_id(b"post-rel");
 		assert_ok!(Pallet::<Test>::fund_escrow(
@@ -701,13 +722,13 @@ fn vote_after_released_fails_wrong_status() {
 		));
 		assert_noop!(
 			Pallet::<Test>::vote_on_escrow(RuntimeOrigin::signed(3), 0, tid.clone(), false,),
-			Error::<Test>::WrongStatus
+			Error::<Test>::NotFound
 		);
 	});
 }
 
 #[test]
-fn vote_after_reject_refund_fails_wrong_status() {
+fn vote_after_reject_refund_fails_not_found() {
 	new_test_ext().execute_with(|| {
 		let tid = task_id(b"post-rej");
 		assert_ok!(Pallet::<Test>::fund_escrow(
@@ -734,7 +755,7 @@ fn vote_after_reject_refund_fails_wrong_status() {
 		));
 		assert_noop!(
 			Pallet::<Test>::vote_on_escrow(RuntimeOrigin::signed(3), 0, tid, true,),
-			Error::<Test>::WrongStatus
+			Error::<Test>::NotFound
 		);
 	});
 }
