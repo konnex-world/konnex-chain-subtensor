@@ -91,18 +91,23 @@ impl<T: Config> Pallet<T> {
                     .unwrap_or(0)
             );
             log::debug!("alpha_emission_i: {:?}", alpha_emission_i);
+            // Pool alpha_in must stay paired with TAO emission: if both registration paths are
+            // closed, do not derive alpha_in from tao_in and then zero only TAO (N6).
+            let registration_open = Self::get_network_registration_allowed(*netuid_i)
+                || Self::get_network_pow_registration_allowed(*netuid_i);
             // Get initial alpha_in
-            let alpha_in_i: U96F32 = tao_in_i
-                .checked_div(price_i)
-                .unwrap_or(alpha_emission_i)
-                .min(alpha_emission_i);
+            let alpha_in_i: U96F32 = if registration_open {
+                tao_in_i
+                    .checked_div(price_i)
+                    .unwrap_or(alpha_emission_i)
+                    .min(alpha_emission_i)
+            } else {
+                asfloat!(0.0)
+            };
             log::debug!("alpha_in_i: {:?}", alpha_in_i);
             // Get alpha_out.
             let alpha_out_i = alpha_emission_i;
-            // Only emit TAO if the subnetwork allows registration.
-            if !Self::get_network_registration_allowed(*netuid_i)
-                && !Self::get_network_pow_registration_allowed(*netuid_i)
-            {
+            if !registration_open {
                 tao_in_i = asfloat!(0.0);
             }
             // Insert values into maps

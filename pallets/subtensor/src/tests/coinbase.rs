@@ -514,6 +514,35 @@ fn test_run_coinbase_excludes_tempo_zero_from_emission() {
     });
 }
 
+// SKIP_WASM_BUILD=1 cargo test -p pallet-subtensor --lib tests::coinbase::test_run_coinbase_no_alpha_in_when_registration_closed -- --exact
+#[test]
+fn test_run_coinbase_no_alpha_in_when_registration_closed() {
+    new_test_ext(1).execute_with(|| {
+        let netuid = NetUid::from(1);
+        add_network(netuid, 1, 0);
+        SubtensorModule::set_tempo(netuid, 10_000);
+        mock::setup_reserves(netuid, 1_000_000, 1);
+        SubnetTAO::<Test>::insert(NetUid::ROOT, 1_000_000_000);
+        SubtensorModule::set_tao_weight(u64::MAX);
+        SubnetMovingPrice::<Test>::insert(netuid, I96F32::from_num(1));
+
+        SubtensorModule::set_network_registration_allowed(netuid, false);
+        SubtensorModule::set_network_pow_registration_allowed(netuid, false);
+
+        let alpha_in_before = SubnetAlphaIn::<Test>::get(netuid);
+        let tao_before = SubnetTAO::<Test>::get(netuid);
+
+        SubtensorModule::run_coinbase(U96F32::from_num(1_000_000));
+
+        assert_eq!(
+            SubnetAlphaIn::<Test>::get(netuid),
+            alpha_in_before,
+            "N6: no alpha_in pool injection when both registration paths are closed"
+        );
+        assert_eq!(SubnetTAO::<Test>::get(netuid), tao_before);
+    });
+}
+
 // SKIP_WASM_BUILD=1 RUST_LOG=debug cargo test --package pallet-subtensor --lib -- tests::coinbase::test_drain_base --exact --show-output --nocapture
 #[test]
 fn test_drain_base() {
