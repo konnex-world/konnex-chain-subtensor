@@ -3538,3 +3538,22 @@ fn test_liquid_alpha_equal_values_against_itself() {
         );
     });
 }
+
+// SKIP_WASM_BUILD=1 cargo test -p pallet-subtensor --lib tests::epoch::get_bonds_sparse_filters_out_of_bounds_uid_j -- --exact
+#[test]
+fn get_bonds_sparse_filters_out_of_bounds_uid_j() {
+    new_test_ext(1).execute_with(|| {
+        let netuid = NetUid::from(1);
+        add_network(netuid, 1, 0);
+        register_ok_neuron(netuid, U256::from(1), U256::from(2), 0);
+        assert_eq!(SubtensorModule::get_subnetwork_n(netuid), 1);
+
+        // Simulate stale storage after shrink: row 0 bonds to valid self and invalid column 5.
+        Bonds::<Test>::insert(netuid, 0u16, vec![(0u16, 1000u16), (5u16, 2000u16)]);
+
+        let sparse = SubtensorModule::get_bonds_sparse(netuid);
+        assert_eq!(sparse.len(), 1);
+        assert_eq!(sparse[0].len(), 1);
+        assert_eq!(sparse[0][0].0, 0u16);
+    });
+}

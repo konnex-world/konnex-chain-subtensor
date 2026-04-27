@@ -952,6 +952,8 @@ impl<T: Config> Pallet<T> {
     }
 
     /// Output unnormalized sparse bonds, input bonds are assumed to be column max-upscaled in u16.
+    /// Filters `uid_j < n` like [`Self::get_weights_sparse`] so stale out-of-range indices cannot
+    /// propagate after subnet shrink (N9).
     pub fn get_bonds_sparse(netuid: NetUid) -> Vec<Vec<(u16, I32F32)>> {
         let n = Self::get_subnetwork_n(netuid) as usize;
         let mut bonds: Vec<Vec<(u16, I32F32)>> = vec![vec![]; n];
@@ -961,11 +963,14 @@ impl<T: Config> Pallet<T> {
             )
             .filter(|(uid_i, _)| *uid_i < n as u16)
         {
-            for (uid_j, bonds_ij) in bonds_vec {
+            for (uid_j, bonds_ij) in bonds_vec
+                .iter()
+                .filter(|(uid_j, _)| *uid_j < n as u16)
+            {
                 bonds
                     .get_mut(uid_i as usize)
                     .expect("uid_i is filtered to be less than n; qed")
-                    .push((uid_j, u16_to_fixed(bonds_ij)));
+                    .push((*uid_j, u16_to_fixed(*bonds_ij)));
             }
         }
         bonds
