@@ -46,10 +46,13 @@ impl<T: Config> Pallet<T> {
             .collect();
         log::debug!("All subnet netuids: {:?}", subnets);
         // Filter out subnets with no first emission block number.
+        // Skip tempo == 0: `should_run_epoch` is never true (see `blocks_until_next_epoch`), so
+        // pending emission from steps below would never be drained at epoch boundaries (N5).
         let subnets_to_emit_to: Vec<NetUid> = subnets
             .clone()
             .into_iter()
             .filter(|netuid| FirstEmissionBlockNumber::<T>::get(*netuid).is_some())
+            .filter(|netuid| Self::get_tempo(*netuid) > 0)
             .collect();
         log::debug!("Subnets to emit to: {:?}", subnets_to_emit_to);
 

@@ -489,6 +489,31 @@ fn test_pending_swapped() {
     });
 }
 
+// SKIP_WASM_BUILD=1 cargo test -p pallet-subtensor --lib tests::coinbase::test_run_coinbase_excludes_tempo_zero_from_emission --exact
+#[test]
+fn test_run_coinbase_excludes_tempo_zero_from_emission() {
+    new_test_ext(1).execute_with(|| {
+        let netuid = NetUid::from(1);
+        add_network(netuid, 0, 0);
+        assert_eq!(SubtensorModule::get_tempo(netuid), 0);
+        mock::setup_reserves(netuid, 1_000_000, 1);
+        SubnetTAO::<Test>::insert(NetUid::ROOT, 1_000_000_000);
+        SubtensorModule::set_tao_weight(u64::MAX);
+
+        let alpha_in_before = SubnetAlphaIn::<Test>::get(netuid);
+        assert_eq!(PendingEmission::<Test>::get(netuid), 0);
+
+        SubtensorModule::run_coinbase(U96F32::from_num(1_000_000));
+
+        assert_eq!(
+            PendingEmission::<Test>::get(netuid),
+            0,
+            "tempo=0 subnets must not enter coinbase emission; pending would never drain"
+        );
+        assert_eq!(SubnetAlphaIn::<Test>::get(netuid), alpha_in_before);
+    });
+}
+
 // SKIP_WASM_BUILD=1 RUST_LOG=debug cargo test --package pallet-subtensor --lib -- tests::coinbase::test_drain_base --exact --show-output --nocapture
 #[test]
 fn test_drain_base() {
