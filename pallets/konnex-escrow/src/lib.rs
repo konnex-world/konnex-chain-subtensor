@@ -10,8 +10,9 @@
 //! - `fund_escrow` — payer signs; transfers `amount` to the pallet pot and opens the escrow.
 //!   Must pass a future `deadline` (block number after which unresolved escrows may be
 //!   reclaimed by the payer).
-//! - `vote_on_escrow` — **resolver-only**; one vote per resolver: **approve** pays the payee,
-//!   **reject** refunds the payer, when a **strict majority** of resolvers agrees (`2*votes > n`).
+//! - `vote_on_escrow` — **resolver-only** (only while `block_number <= deadline`); one vote per
+//!   resolver: **approve** pays the payee, **reject** refunds the payer, when a **strict majority**
+//!   of resolvers agrees (`2*votes > n`).
 //! - `refund_after_deadline` — **payer-only**; after `deadline` if the escrow is still awaiting
 //!   resolution (no majority vote yet), the payer takes funds back. Not callable once funds
 //!   moved to the payee (**released**) or already returned (**refunded**), including after a
@@ -22,7 +23,8 @@
 //! 1. **Payer** chooses `subnet_id`, unique `task_id`, `payee`, `amount`, `description_hash`,
 //!    resolver list, and `deadline` > current block.
 //! 2. Payer calls **`fund_escrow`** — balances move to the pallet; state is `AwaitingRelease`.
-//! 3. **Resolvers** (and only they) call **`vote_on_escrow`** with `approve = true/false`.
+//! 3. **Resolvers** (and only they) call **`vote_on_escrow`** with `approve = true/false` **on or
+//!    before the `deadline` block**.
 //!    - If **strict majority approve** → full `amount` goes to **payee**; escrow `Released`.
 //!      The payer **cannot** use `refund_after_deadline` (wrong status).
 //!    - If **strict majority reject** → funds return to **payer**; escrow `Refunded`.
@@ -46,6 +48,9 @@
 //!
 //! - `deadline` is a **block height** (must be **strictly greater** than the current block when
 //!   funding).
+//! - Resolvers may call **`vote_on_escrow` only while `block_number <= deadline`**. After the
+//!   deadline, new votes are rejected so they cannot race **`refund_after_deadline`** in the same
+//!   block (N7).
 //! - While status is `AwaitingRelease` and `block_number > deadline`, the **payer** may
 //!   **`refund_after_deadline`** if resolvers never reached a majority (stalemate / no decision).
 //! - After **`EscrowReleased`** (payee paid), the payer **cannot** reclaim funds on-chain via
@@ -197,6 +202,8 @@ pub mod pallet {
 		AlreadyVoted,
 		DeadlineInPast,
 		DeadlineNotPassed,
+		/// Resolver votes are not accepted after `deadline` (payer may `refund_after_deadline`).
+		VotingAfterDeadline,
 		NotPayer,
 	}
 
@@ -336,6 +343,8 @@ pub mod pallet {
 				rec.status == EscrowStatus::AwaitingRelease,
 				Error::<T>::WrongStatus
 			);
+			let now = frame_system::Pallet::<T>::block_number();
+			ensure!(now <= rec.deadline, Error::<T>::VotingAfterDeadline);
 			ensure!(
 				rec.resolvers.iter().any(|r| r == &voter),
 				Error::<T>::NotResolver

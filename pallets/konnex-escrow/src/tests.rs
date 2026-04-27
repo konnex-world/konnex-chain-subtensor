@@ -291,6 +291,96 @@ fn refund_after_deadline_returns_to_payer() {
 }
 
 #[test]
+fn vote_on_escrow_rejected_after_deadline() {
+	new_test_ext().execute_with(|| {
+		let tid = task_id(b"late-vote");
+		let deadline = 5u64;
+		assert_ok!(Pallet::<Test>::fund_escrow(
+			RuntimeOrigin::signed(1),
+			0,
+			tid.clone(),
+			2,
+			20,
+			[1u8; 32],
+			deadline,
+			resolvers(&[3, 4, 5]),
+		));
+		System::set_block_number(deadline + 1);
+		assert_noop!(
+			Pallet::<Test>::vote_on_escrow(RuntimeOrigin::signed(3), 0, tid.clone(), true,),
+			Error::<Test>::VotingAfterDeadline
+		);
+	});
+}
+
+#[test]
+fn vote_on_escrow_ok_at_deadline_block() {
+	new_test_ext().execute_with(|| {
+		let pot = Pallet::<Test>::pallet_account();
+		let tid = task_id(b"edge-deadline");
+		let deadline = 5u64;
+		let only_r = 3u64;
+		let amount = 15u64;
+		assert_ok!(Pallet::<Test>::fund_escrow(
+			RuntimeOrigin::signed(1),
+			0,
+			tid.clone(),
+			2,
+			amount,
+			[2u8; 32],
+			deadline,
+			resolvers(&[only_r]),
+		));
+		System::set_block_number(deadline);
+		assert_ok!(Pallet::<Test>::vote_on_escrow(
+			RuntimeOrigin::signed(only_r),
+			0,
+			tid.clone(),
+			true,
+		));
+		assert_eq!(
+			Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status,
+			EscrowStatus::Released
+		);
+		assert_eq!(Balances::balance(&2), 1_000 + amount);
+		assert_eq!(Balances::balance(&pot), 0);
+	});
+}
+
+#[test]
+fn refund_after_deadline_succeeds_when_vote_blocked_after_deadline() {
+	new_test_ext().execute_with(|| {
+		let tid = task_id(b"race-refund");
+		let amount = 30u64;
+		let deadline = 5u64;
+		assert_ok!(Pallet::<Test>::fund_escrow(
+			RuntimeOrigin::signed(1),
+			0,
+			tid.clone(),
+			2,
+			amount,
+			[3u8; 32],
+			deadline,
+			resolvers(&[3, 4]),
+		));
+		System::set_block_number(deadline + 1);
+		assert_noop!(
+			Pallet::<Test>::vote_on_escrow(RuntimeOrigin::signed(3), 0, tid.clone(), true,),
+			Error::<Test>::VotingAfterDeadline
+		);
+		assert_ok!(Pallet::<Test>::refund_after_deadline(
+			RuntimeOrigin::signed(1),
+			0,
+			tid.clone(),
+		));
+		assert_eq!(
+			Escrows::<Test>::get(escrow_key(0, &tid)).unwrap().status,
+			EscrowStatus::Refunded
+		);
+	});
+}
+
+#[test]
 fn only_payer_may_refund_after_deadline() {
 	new_test_ext().execute_with(|| {
 		let tid = task_id(b"np");
