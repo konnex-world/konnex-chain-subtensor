@@ -20,7 +20,7 @@ name = "spec_version"
 path = "src/spec_version.rs"
 
 [dependencies]
-subtensor-macros.workspace = true
+subtensor-macros = { workspace = true }
 subtensor-custom-rpc-runtime-api = { workspace = true }
 smallvec = { workspace = true }
 log = { workspace = true }
@@ -255,6 +255,7 @@ runtime-benchmarks = [
 	"pallet-scheduler/runtime-benchmarks",
 	"pallet-sudo/runtime-benchmarks",
 	"pallet-crowdloan/runtime-benchmarks",
+	"pallet-konnex-escrow/runtime-benchmarks",
 
 	# EVM + Frontier
 	"pallet-ethereum/runtime-benchmarks",
@@ -289,6 +290,7 @@ try-runtime = [
 	"pallet-commitments/try-runtime",
 	"pallet-registry/try-runtime",
 	"pallet-crowdloan/try-runtime",
+	"pallet-konnex-escrow/try-runtime",
 
 	# EVM + Frontier
 	"fp-self-contained/try-runtime",

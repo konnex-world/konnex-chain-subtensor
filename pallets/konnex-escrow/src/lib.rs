@@ -228,10 +228,12 @@ pub mod pallet {
 
 		fn ensure_unique_resolvers(resolvers: &[T::AccountId]) -> DispatchResult {
 			ensure!(!resolvers.is_empty(), Error::<T>::EmptyResolverSet);
-			for (i, a) in resolvers.iter().enumerate() {
-				for b in resolvers.iter().skip(i + 1) {
-					ensure!(a != b, Error::<T>::DuplicateResolver);
-				}
+			let mut seen = sp_std::collections::btree_set::BTreeSet::new();
+			for resolver in resolvers.iter() {
+				ensure!(
+					seen.insert(resolver.encode()),
+					Error::<T>::DuplicateResolver
+				);
 			}
 			Ok(())
 		}
@@ -265,7 +267,7 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 		/// Lock `amount` from the signer (payer), store `EscrowRecord` at `(subnet_id, task_id)`.
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::fund_escrow())]
+		#[pallet::weight(T::WeightInfo::fund_escrow(resolvers.len() as u32))]
 		pub fn fund_escrow(
 			origin: OriginFor<T>,
 			subnet_id: u16,
@@ -319,7 +321,7 @@ pub mod pallet {
 		/// Resolver-only: vote to pay the payee (`approve == true`) or refund the payer (`false`).
 		/// When a strict majority of resolvers agrees on one side, funds move and votes are cleared.
 		#[pallet::call_index(1)]
-		#[pallet::weight(T::WeightInfo::vote_on_escrow())]
+		#[pallet::weight(T::WeightInfo::vote_on_escrow(T::MaxResolvers::get()))]
 		pub fn vote_on_escrow(
 			origin: OriginFor<T>,
 			subnet_id: u16,
@@ -398,7 +400,7 @@ pub mod pallet {
 		/// Payer-only: if `block_number > deadline` and the escrow never reached a majority (still
 		/// `AwaitingRelease`), return locked funds to the payer. See module-level docs.
 		#[pallet::call_index(2)]
-		#[pallet::weight(T::WeightInfo::refund_after_deadline())]
+		#[pallet::weight(T::WeightInfo::refund_after_deadline(T::MaxResolvers::get()))]
 		pub fn refund_after_deadline(
 			origin: OriginFor<T>,
 			subnet_id: u16,
@@ -443,3 +445,5 @@ pub use pallet::*;
 mod mock;
 #[cfg(test)]
 mod tests;
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking;

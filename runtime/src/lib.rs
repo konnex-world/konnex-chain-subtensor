@@ -1657,6 +1657,7 @@ mod benches {
         [pallet_subtensor, SubtensorModule]
         [pallet_drand, Drand]
         [pallet_crowdloan, Crowdloan]
+        [pallet_konnex_escrow, KonnexEscrow]
     );
 }
 
