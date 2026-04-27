@@ -893,6 +893,10 @@ impl<T: Config> Pallet<T> {
         }
 
         let mut entries = CRV3WeightCommits::<T>::take(netuid, reveal_epoch);
+        // Commits whose drand round is not in `Pulses` yet: re-queue after this pass so later
+        // entries in the same invocation (or a follow-up `reveal_crv3_commits` in the same epoch)
+        // are not processed at the cost of dropping earlier ones from storage.
+        let mut deferred_missing_pulse = Vec::new();
 
         // Keep popping item off the end of the queue until we sucessfully reveal a commit.
         while let Some((who, serialized_compresssed_commit, round_number)) = entries.pop_front() {
@@ -914,13 +918,13 @@ impl<T: Config> Pallet<T> {
             let pulse = match pallet_drand::Pulses::<T>::get(round_number) {
                 Some(p) => p,
                 None => {
-                    // Round number used was not found on the chain. Skip this commit.
                     log::warn!(
-                        "Failed to reveal commit for subnet {} submitted by {:?} due to missing round number {} at time of reveal.",
+                        "Failed to reveal commit for subnet {} submitted by {:?} due to missing round number {} at time of reveal; re-queuing for a later attempt.",
                         netuid,
                         who,
                         round_number
                     );
+                    deferred_missing_pulse.push((who, serialized_compresssed_commit, round_number));
                     continue;
                 }
             };
@@ -993,6 +997,15 @@ impl<T: Config> Pallet<T> {
             } else {
                 Self::deposit_event(Event::CRV3WeightsRevealed(netuid, who));
             };
+        }
+
+        if !deferred_missing_pulse.is_empty() {
+            CRV3WeightCommits::<T>::try_mutate(netuid, reveal_epoch, |commits| -> dispatch::DispatchResult {
+                for entry in deferred_missing_pulse {
+                    commits.push_back(entry);
+                }
+                Ok(())
+            })?;
         }
 
         Ok(())
