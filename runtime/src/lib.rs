@@ -693,6 +693,11 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
             ProxyType::NonTransfer => !matches!(
                 c,
                 RuntimeCall::Balances(..)
+                    | RuntimeCall::Sudo(..)
+                    | RuntimeCall::System(..)
+                    | RuntimeCall::Multisig(..)
+                    | RuntimeCall::SafeMode(..)
+                    | RuntimeCall::Proxy(..)
                     | RuntimeCall::SubtensorModule(pallet_subtensor::Call::transfer_stake { .. })
                     | RuntimeCall::SubtensorModule(
                         pallet_subtensor::Call::schedule_swap_coldkey { .. }
@@ -702,6 +707,11 @@ impl InstanceFilter<RuntimeCall> for ProxyType {
             ProxyType::NonFungibile => !matches!(
                 c,
                 RuntimeCall::Balances(..)
+                    | RuntimeCall::Sudo(..)
+                    | RuntimeCall::System(..)
+                    | RuntimeCall::Multisig(..)
+                    | RuntimeCall::SafeMode(..)
+                    | RuntimeCall::Proxy(..)
                     | RuntimeCall::SubtensorModule(pallet_subtensor::Call::add_stake { .. })
                     | RuntimeCall::SubtensorModule(pallet_subtensor::Call::add_stake_limit { .. })
                     | RuntimeCall::SubtensorModule(pallet_subtensor::Call::remove_stake { .. })
